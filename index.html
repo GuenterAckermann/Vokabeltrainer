@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google" content="notranslate" />
+  <meta name="translate" content="no" />
   <title>Vokabeltrainer</title>
   <style>
     :root{
@@ -54,10 +56,11 @@
     }
     .row{display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
     .foot{font-size:.9rem; color:var(--muted); text-align:center; margin-top:10px;}
+    .hint{font-size:.9rem; color:var(--muted); line-height:1.45; margin-top:10px;}
   </style>
 </head>
-<body>
-<div class="wrap">
+<body class="notranslate">
+<div class="wrap notranslate">
   <h1>Vokabeltrainer Deutsch ↔ Spanisch</h1>
 
   <div class="card">
@@ -103,7 +106,7 @@
       <span class="pill" id="levelPill">Stufe: –</span>
     </div>
 
-    <div class="question" id="question">Bitte zuerst eine JSON-Datei importieren oder ein Wort laden.</div>
+    <div class="question" id="question">Bitte zuerst eine CSV- oder JSON-Datei importieren.</div>
 
     <div id="solutionArea" class="hidden">
       <div class="answer" id="answer"></div>
@@ -119,10 +122,12 @@
 
   <div class="card">
     <h3>Daten importieren</h3>
-    <label for="importFile">JSON-Datei importieren</label>
+    <label for="importFile">CSV- oder JSON-Datei importieren</label>
     <input type="file" id="importFile" accept="*/*">
-    <p class="muted" style="margin-top:10px;">
-      Nach dem Import bleiben die Daten im Browser gespeichert. Du musst sie beim nächsten Start nicht erneut importieren.
+    <p class="hint">
+      Unterstützte Formate: CSV oder JSON. Für CSV bitte die Spalten
+      <code>Nummer, Deutsch, Spanisch, Kategorie, Zaehler, Bemerkungen</code>
+      verwenden. Die Daten bleiben nach dem Import im Browser gespeichert.
     </p>
   </div>
 
@@ -130,7 +135,7 @@
 </div>
 
 <script>
-const STORAGE_KEY = "vokabeltrainer_data_v2";
+const STORAGE_KEY = "vokabeltrainer_data_v3";
 
 let words = [];
 let current = null;
@@ -306,13 +311,110 @@ function exportJson(){
   URL.revokeObjectURL(a.href);
 }
 
-function importJson(file){
+function detectDelimiter(text){
+  const firstLine = text.split(/\r?\n/).find(line => line.trim() !== "") || "";
+  const semicolons = (firstLine.match(/;/g) || []).length;
+  const commas = (firstLine.match(/,/g) || []).length;
+  const tabs = (firstLine.match(/\t/g) || []).length;
+  if (tabs >= semicolons && tabs >= commas) return "\t";
+  if (semicolons >= commas) return ";";
+  return ",";
+}
+
+function parseCsvLine(line, delimiter){
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++){
+    const ch = line[i];
+    const next = line[i + 1];
+
+    if (ch === '"'){
+      if (inQuotes && next === '"'){
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === delimiter && !inQuotes){
+      result.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result.map(v => v.trim());
+}
+
+function parseCsv(text){
+  const delimiter = detectDelimiter(text);
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter(line => line.trim() !== "");
+
+  if (!lines.length) throw new Error("CSV ist leer.");
+
+  const headers = parseCsvLine(lines[0], delimiter).map(h => h.trim().toLowerCase());
+
+  const findIndex = names => headers.findIndex(h => names.includes(h));
+  const idxNummer = findIndex(["nummer", "id"]);
+  const idxDeutsch = findIndex(["deutsch"]);
+  const idxSpanisch = findIndex(["spanisch", "espanol", "español"]);
+  const idxKategorie = findIndex(["kategorie", "kategorieid", "category"]);
+  const idxZaehler = findIndex(["zaehler", "zähler", "stufe"]);
+  const idxBemerkungen = findIndex(["bemerkungen", "bemerkung", "notiz", "notizen", "notes"]);
+
+  if (idxDeutsch < 0 || idxSpanisch < 0){
+    throw new Error("CSV braucht mindestens die Spalten Deutsch und Spanisch.");
+  }
+
+  const items = [];
+  for (let i = 1; i < lines.length; i++){
+    const cols = parseCsvLine(lines[i], delimiter);
+    const obj = {
+      Nummer: idxNummer >= 0 ? cols[idxNummer] : i,
+      Deutsch: idxDeutsch >= 0 ? cols[idxDeutsch] : "",
+      Spanisch: idxSpanisch >= 0 ? cols[idxSpanisch] : "",
+      Kategorie: idxKategorie >= 0 ? cols[idxKategorie] : "",
+      Zaehler: idxZaehler >= 0 ? cols[idxZaehler] : 1,
+      Bemerkungen: idxBemerkungen >= 0 ? cols[idxBemerkungen] : ""
+    };
+    items.push(normalizeItem(obj, i));
+  }
+  return items.filter(w => w.Deutsch || w.Spanisch);
+}
+
+function importJsonText(text){
+  const parsed = JSON.parse(text);
+  if(!Array.isArray(parsed)) throw new Error("JSON ist keine Liste.");
+  return parsed.map(normalizeItem).filter(w => w.Deutsch || w.Spanisch);
+}
+
+function importText(text, filename){
+  const lower = (filename || "").toLowerCase();
+  const trimmed = text.trim();
+  if (lower.endsWith(".csv") || lower.endsWith(".txt")){
+    return parseCsv(text);
+  }
+  if (lower.endsWith(".json")){
+    return importJsonText(text);
+  }
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")){
+    return importJsonText(text);
+  }
+  return parseCsv(text);
+}
+
+function importFile(file){
   const reader = new FileReader();
   reader.onload = function(){
     try{
-      const parsed = JSON.parse(reader.result);
-      if(!Array.isArray(parsed)) throw new Error("JSON ist keine Liste.");
-      words = parsed.map(normalizeItem).filter(w => w.Deutsch || w.Spanisch);
+      const imported = importText(reader.result, file.name);
+      if (!imported.length) throw new Error("Keine gültigen Daten gefunden.");
+      words = imported;
       current = null;
       lastNummer = null;
       saveState();
@@ -332,7 +434,7 @@ function importJson(file){
 
 el.importFile.addEventListener("change", e => {
   const file = e.target.files && e.target.files[0];
-  if(file) importJson(file);
+  if(file) importFile(file);
 });
 
 el.nextBtn.addEventListener("click", nextWord);
@@ -352,7 +454,7 @@ updateCountInfo();
 if(words.length > 0){
   el.question.textContent = "Gespeicherte Daten gefunden. Du kannst direkt starten.";
 }else{
-  el.question.textContent = "Bitte zuerst eine JSON-Datei importieren.";
+  el.question.textContent = "Bitte zuerst eine CSV- oder JSON-Datei importieren.";
 }
 </script>
 </body>
