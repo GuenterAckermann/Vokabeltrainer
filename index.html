@@ -94,8 +94,7 @@
     </div>
 
     <div class="btns three">
-      <button id="nextBtn">Nächstes Wort</button>
-      <button id="showBtn">Lösung zeigen</button>
+     <button id="nextBtn">Weiter</button>
       <button id="exportBtn" class="secondary">Daten exportieren</button>
     </div>
   </div>
@@ -141,6 +140,17 @@ let words = [];
 let current = null;
 let lastNummer = null;
 
+const KATEGORIEN_MAP = {
+  1: "Verben",
+  2: "Substantive",
+  3: "Adjektive",
+  4: "Redewendungen"
+5: "Diverses"
+6: "Sätze"
+};
+
+let showingSolution = false;
+
 const el = {
   direction: document.getElementById("direction"),
   category: document.getElementById("category"),
@@ -183,7 +193,7 @@ function normalizeItem(x, idx){
     Nummer: Number(x.Nummer ?? idx + 1),
     Deutsch: String(x.Deutsch ?? "").trim(),
     Spanisch: String(x.Spanisch ?? "").trim(),
-    Kategorie: String(x.Kategorie ?? "").trim(),
+    Kategorie: KATEGORIEN_MAP[x.Kategorie] || String(x.Kategorie ?? "").trim(),
     Zaehler: Math.min(3, Math.max(1, Number(x.Zaehler ?? 1) || 1)),
     Bemerkungen: String(x.Bemerkungen ?? "").trim()
   };
@@ -237,6 +247,8 @@ function nextWord(){
     el.levelPill.textContent = "Stufe: –";
     updateCountInfo();
     return;
+	showingSolution = false;
+	el.nextBtn.textContent = "Lösung anzeigen";
   }
 
   if(el.avoidRepeat.checked && list.length > 1 && lastNummer !== null){
@@ -276,6 +288,8 @@ function showSolution(){
     el.answer.textContent = current.Spanisch;
   }else{
     el.answer.textContent = current.Deutsch;
+	showingSolution = true;
+	el.nextBtn.textContent = "Weiter";
   }
 
   el.notes.textContent = current.Bemerkungen || "–";
@@ -437,8 +451,15 @@ el.importFile.addEventListener("change", e => {
   if(file) importFile(file);
 });
 
-el.nextBtn.addEventListener("click", nextWord);
-el.showBtn.addEventListener("click", showSolution);
+el.nextBtn.addEventListener("click", () => {
+  if (!current || showingSolution) {
+    nextWord();
+    showingSolution = false;
+  } else {
+    showSolution();
+    showingSolution = true;
+  }
+});
 el.exportBtn.addEventListener("click", exportJson);
 el.easierBtn.addEventListener("click", () => changeLevel(-1));
 el.harderBtn.addEventListener("click", () => changeLevel(1));
