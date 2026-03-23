@@ -1,482 +1,185 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="google" content="notranslate" />
-  <meta name="translate" content="no" />
-  <title>Vokabeltrainer</title>
-  <style>
-    :root{
-      --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
-      --border:#e5e7eb; --accent:#2563eb; --accent2:#1d4ed8;
-      --good:#059669; --bad:#dc2626;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0; padding:16px; background:var(--bg); color:var(--text);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    }
-    .wrap{max-width:760px; margin:0 auto;}
-    .card{
-      background:var(--card); border:1px solid var(--border); border-radius:16px;
-      padding:16px; margin-bottom:16px; box-shadow:0 8px 24px rgba(0,0,0,.05);
-    }
-    h1{font-size:1.5rem; margin:0 0 16px;}
-    h3{margin:0 0 12px;}
-    label{display:block; font-size:.95rem; color:var(--muted); margin-bottom:6px; font-weight:600;}
-    select, input[type="file"]{
-      width:100%; padding:12px 14px; border:1px solid var(--border);
-      border-radius:12px; background:#fff; font-size:1rem;
-    }
-    .grid{display:grid; gap:12px;}
-    @media (min-width:640px){ .grid.two{grid-template-columns:1fr 1fr;} }
-    .check{display:flex; gap:10px; align-items:center; margin-top:8px;}
-    .check label{margin:0; color:var(--text); font-weight:500;}
-    button{
-      border:0; border-radius:12px; padding:12px 14px; cursor:pointer;
-      font-size:1rem; font-weight:700; color:#fff; background:var(--accent);
-    }
-    button:hover{background:var(--accent2)}
-    button.secondary{background:#fff; color:var(--text); border:1px solid var(--border);}
-    button.good{background:var(--good)}
-    button.bad{background:var(--bad)}
-    .btns{display:grid; gap:10px; margin-top:14px;}
-    @media (min-width:520px){ .btns.three{grid-template-columns:1fr 1fr 1fr;} .btns.two{grid-template-columns:1fr 1fr;} }
-    .question{
-      min-height:96px; display:flex; align-items:center; justify-content:center;
-      text-align:center; font-size:2rem; font-weight:800; padding:10px;
-    }
-    .answer{font-size:1.5rem; font-weight:800; text-align:center; margin-bottom:14px;}
-    .hidden{display:none}
-    .muted{color:var(--muted)}
-    .pill{
-      display:inline-block; padding:6px 10px; border-radius:999px;
-      background:#eef2ff; border:1px solid var(--border); font-weight:700;
-    }
-    .row{display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
-    .foot{font-size:.9rem; color:var(--muted); text-align:center; margin-top:10px;}
-    .hint{font-size:.9rem; color:var(--muted); line-height:1.45; margin-top:10px;}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vokabeltrainer</title>
+
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:15px; }
+.card { background:white; padding:15px; border-radius:10px; margin-bottom:15px; }
+button { padding:12px; margin:5px; font-size:16px; }
+.question { font-size:26px; text-align:center; margin:20px 0; }
+.answer { font-size:22px; text-align:center; margin-top:10px; }
+.hidden { display:none; }
+</style>
 </head>
-<body class="notranslate">
-<div class="wrap notranslate">
-  <h1>Vokabeltrainer Deutsch ↔ Spanisch</h1>
 
-  <div class="card">
-    <div class="row">
-      <h3>Einstellungen</h3>
-      <span class="pill" id="countInfo">0 Wörter</span>
-    </div>
+<body>
 
-    <div class="grid two">
-      <div>
-        <label for="direction">Abfragerichtung</label>
-        <select id="direction">
-          <option value="de-es">Deutsch → Spanisch</option>
-          <option value="es-de">Spanisch → Deutsch</option>
-        </select>
-      </div>
-      <div>
-        <label for="category">Kategorie</label>
-        <select id="category"></select>
-      </div>
-    </div>
+<div class="card">
+<h3>Einstellungen</h3>
 
-    <div class="check">
-      <input type="checkbox" id="onlyDifficult">
-      <label for="onlyDifficult">Nur schwierige Wörter (Zaehler ≥ 2)</label>
-    </div>
+<select id="direction">
+<option value="de-es">Deutsch → Spanisch</option>
+<option value="es-de">Spanisch → Deutsch</option>
+</select>
 
-    <div class="check">
-      <input type="checkbox" id="avoidRepeat" checked>
-      <label for="avoidRepeat">Nicht direkt dasselbe Wort wiederholen</label>
-    </div>
+<select id="category"></select>
 
-    <div class="btns three">
-     <button id="nextBtn">Weiter</button>
-      <button id="exportBtn" class="secondary">Daten exportieren</button>
-    </div>
-  </div>
+<label>
+<input type="checkbox" id="onlyDifficult"> Nur schwierige Wörter
+</label>
 
-  <div class="card">
-    <div class="row">
-      <h3>Lernkarte</h3>
-      <span class="pill" id="levelPill">Stufe: –</span>
-    </div>
+<br><br>
+<button id="nextBtn">Weiter</button>
+</div>
 
-    <div class="question" id="question">Bitte zuerst eine CSV- oder JSON-Datei importieren.</div>
+<div class="card">
+<h3>Lernkarte</h3>
 
-    <div id="solutionArea" class="hidden">
-      <div class="answer" id="answer"></div>
-      <p><strong>Bemerkungen:</strong> <span id="notes" class="muted">–</span></p>
-      <p><strong>Kategorie:</strong> <span id="catLabel" class="muted">–</span></p>
+<div class="question" id="question">Start drücken</div>
 
-      <div class="btns two">
-        <button id="easierBtn" class="good">− leichter</button>
-        <button id="harderBtn" class="bad">+ schwieriger</button>
-      </div>
-    </div>
-  </div>
+<div id="solutionArea" class="hidden">
+<div class="answer" id="answer"></div>
+<p id="notes"></p>
 
-  <div class="card">
-    <h3>Daten importieren</h3>
-    <label for="importFile">CSV- oder JSON-Datei importieren</label>
-    <input type="file" id="importFile" accept="*/*">
-    <p class="hint">
-      Unterstützte Formate: CSV oder JSON. Für CSV bitte die Spalten
-      <code>Nummer, Deutsch, Spanisch, Kategorie, Zaehler, Bemerkungen</code>
-      verwenden. Die Daten bleiben nach dem Import im Browser gespeichert.
-    </p>
-  </div>
+<button onclick="changeLevel(-1)">- leichter</button>
+<button onclick="changeLevel(1)">+ schwieriger</button>
+</div>
 
-  <div class="foot">Tipp: Im Browser-Menü „Zum Startbildschirm hinzufügen“ wählen.</div>
+<p>Stufe: <span id="level">-</span></p>
+</div>
+
+<div class="card">
+<h3>Daten importieren</h3>
+<input type="file" id="importFile" accept="*/*">
 </div>
 
 <script>
-const STORAGE_KEY = "vokabeltrainer_data_v3";
-
-let words = [];
-let current = null;
-let lastNummer = null;
 
 const KATEGORIEN_MAP = {
   1: "Verben",
   2: "Substantive",
   3: "Adjektive",
-  4: "Redewendungen"
-5: "Diverses"
-6: "Sätze"
+  4: "Redewendungen",
+  5: "Diverses",
+  6: "Sätze"
 };
 
+let words = [];
+let current = null;
 let showingSolution = false;
 
-const el = {
-  direction: document.getElementById("direction"),
-  category: document.getElementById("category"),
-  onlyDifficult: document.getElementById("onlyDifficult"),
-  avoidRepeat: document.getElementById("avoidRepeat"),
-  nextBtn: document.getElementById("nextBtn"),
-  showBtn: document.getElementById("showBtn"),
-  exportBtn: document.getElementById("exportBtn"),
-  importFile: document.getElementById("importFile"),
-  question: document.getElementById("question"),
-  solutionArea: document.getElementById("solutionArea"),
-  answer: document.getElementById("answer"),
-  notes: document.getElementById("notes"),
-  catLabel: document.getElementById("catLabel"),
-  levelPill: document.getElementById("levelPill"),
-  countInfo: document.getElementById("countInfo"),
-  easierBtn: document.getElementById("easierBtn"),
-  harderBtn: document.getElementById("harderBtn")
-};
+document.getElementById("importFile").addEventListener("change", function(e){
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(){
+        words = parseCSV(reader.result);
+        populateCategories();
+        alert("Import erfolgreich!");
+    };
+    reader.readAsText(file);
+});
 
-function saveState(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
-  updateCountInfo();
-  populateCategories();
-}
+function parseCSV(text){
+    let lines = text.split("\n").filter(l=>l.trim()!="");
+    let headers = lines[0].split(";");
 
-function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  }catch(e){
-    return [];
-  }
-}
+    return lines.slice(1).map((line,i)=>{
+        let cols = line.split(";");
 
-function normalizeItem(x, idx){
-  return {
-    Nummer: Number(x.Nummer ?? idx + 1),
-    Deutsch: String(x.Deutsch ?? "").trim(),
-    Spanisch: String(x.Spanisch ?? "").trim(),
-    Kategorie: KATEGORIEN_MAP[x.Kategorie] || String(x.Kategorie ?? "").trim(),
-    Zaehler: Math.min(3, Math.max(1, Number(x.Zaehler ?? 1) || 1)),
-    Bemerkungen: String(x.Bemerkungen ?? "").trim()
-  };
+        return {
+            Nummer: i+1,
+            Deutsch: cols[1],
+            Spanisch: cols[2],
+            Kategorie: KATEGORIEN_MAP[Number(cols[3])] || cols[3],
+            Zaehler: Number(cols[4] || 1),
+            Bemerkungen: cols[5] || ""
+        };
+    });
 }
 
 function populateCategories(){
-  const currentVal = el.category.value;
-  const cats = [...new Set(words.map(w => w.Kategorie).filter(Boolean))].sort((a,b)=>a.localeCompare(b, "de"));
-  el.category.innerHTML = '<option value="">Keine Präferenz</option>';
-  cats.forEach(c => {
-    const opt = document.createElement("option");
-    opt.value = c;
-    opt.textContent = c;
-    el.category.appendChild(opt);
-  });
-  if ([...el.category.options].some(o => o.value === currentVal)) {
-    el.category.value = currentVal;
-  }
-}
+    let sel = document.getElementById("category");
+    sel.innerHTML = "<option value=''>Alle</option>";
 
-function updateCountInfo(){
-  const filtered = getFilteredWords().length;
-  el.countInfo.textContent = `${words.length} Wörter · ${filtered} im Filter`;
+    let cats = [...new Set(words.map(w=>w.Kategorie))];
+
+    cats.forEach(c=>{
+        let opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+    });
 }
 
 function weight(z){
-  if(z === 1) return 1;
-  if(z === 2) return 2;
-  if(z === 3) return 4;
-  return 1;
+    if(z==1) return 1;
+    if(z==2) return 2;
+    if(z==3) return 4;
 }
 
-function getFilteredWords(){
-  const cat = el.category.value;
-  const only = el.onlyDifficult.checked;
-  return words.filter(w => {
-    if(!w.Deutsch || !w.Spanisch) return false;
-    if(cat && w.Kategorie !== cat) return false;
-    if(only && Number(w.Zaehler) < 2) return false;
-    return true;
-  });
+function getFiltered(){
+    let cat = document.getElementById("category").value;
+    let only = document.getElementById("onlyDifficult").checked;
+
+    return words.filter(w=>{
+        if(cat && w.Kategorie!=cat) return false;
+        if(only && w.Zaehler<2) return false;
+        return true;
+    });
 }
 
 function nextWord(){
-  let list = getFilteredWords();
+    let list = getFiltered();
+    if(list.length==0){ alert("Keine Wörter"); return; }
 
-  if(list.length === 0){
-    current = null;
-    el.question.textContent = "Keine passenden Wörter gefunden.";
-    el.solutionArea.classList.add("hidden");
-    el.levelPill.textContent = "Stufe: –";
-    updateCountInfo();
-    return;
-	showingSolution = false;
-	el.nextBtn.textContent = "Lösung anzeigen";
-  }
+    let total = list.reduce((s,w)=>s+weight(w.Zaehler),0);
+    let r = Math.random()*total;
 
-  if(el.avoidRepeat.checked && list.length > 1 && lastNummer !== null){
-    const reduced = list.filter(w => Number(w.Nummer) !== Number(lastNummer));
-    if(reduced.length > 0) list = reduced;
-  }
-
-  const total = list.reduce((sum, w) => sum + weight(Number(w.Zaehler)), 0);
-  let r = Math.floor(Math.random() * total) + 1;
-
-  let running = 0;
-  for(const w of list){
-    running += weight(Number(w.Zaehler));
-    if(r <= running){
-      current = w;
-      break;
+    let sum = 0;
+    for(let w of list){
+        sum += weight(w.Zaehler);
+        if(r<=sum){ current=w; break; }
     }
-  }
 
-  lastNummer = current.Nummer;
-  el.solutionArea.classList.add("hidden");
+    document.getElementById("solutionArea").classList.add("hidden");
+    document.getElementById("question").textContent =
+        document.getElementById("direction").value=="de-es" ? current.Deutsch : current.Spanisch;
 
-  if(el.direction.value === "de-es"){
-    el.question.textContent = current.Deutsch;
-  }else{
-    el.question.textContent = current.Spanisch;
-  }
-
-  el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
-  updateCountInfo();
+    document.getElementById("level").textContent = current.Zaehler;
+    showingSolution = false;
+    document.getElementById("nextBtn").textContent = "Lösung anzeigen";
 }
 
 function showSolution(){
-  if(!current) return;
+    document.getElementById("solutionArea").classList.remove("hidden");
 
-  if(el.direction.value === "de-es"){
-    el.answer.textContent = current.Spanisch;
-  }else{
-    el.answer.textContent = current.Deutsch;
-	showingSolution = true;
-	el.nextBtn.textContent = "Weiter";
-  }
+    document.getElementById("answer").textContent =
+        document.getElementById("direction").value=="de-es" ? current.Spanisch : current.Deutsch;
 
-  el.notes.textContent = current.Bemerkungen || "–";
-  el.catLabel.textContent = current.Kategorie || "–";
-  el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
-  el.solutionArea.classList.remove("hidden");
-}
-
-function changeLevel(delta){
-  if(!current) return;
-
-  const idx = words.findIndex(w => Number(w.Nummer) === Number(current.Nummer));
-  if(idx < 0) return;
-
-  let z = Number(words[idx].Zaehler) + delta;
-  if(z < 1) z = 1;
-  if(z > 3) z = 3;
-
-  words[idx].Zaehler = z;
-  current.Zaehler = z;
-  el.levelPill.textContent = `Stufe: ${z}`;
-  saveState();
-}
-
-function exportJson(){
-  const blob = new Blob([JSON.stringify(words, null, 2)], {type: "application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "wortliste_export.json";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(a.href);
-}
-
-function detectDelimiter(text){
-  const firstLine = text.split(/\r?\n/).find(line => line.trim() !== "") || "";
-  const semicolons = (firstLine.match(/;/g) || []).length;
-  const commas = (firstLine.match(/,/g) || []).length;
-  const tabs = (firstLine.match(/\t/g) || []).length;
-  if (tabs >= semicolons && tabs >= commas) return "\t";
-  if (semicolons >= commas) return ";";
-  return ",";
-}
-
-function parseCsvLine(line, delimiter){
-  const result = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++){
-    const ch = line[i];
-    const next = line[i + 1];
-
-    if (ch === '"'){
-      if (inQuotes && next === '"'){
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (ch === delimiter && !inQuotes){
-      result.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current);
-  return result.map(v => v.trim());
-}
-
-function parseCsv(text){
-  const delimiter = detectDelimiter(text);
-  const lines = text
-    .replace(/^\uFEFF/, "")
-    .split(/\r?\n/)
-    .filter(line => line.trim() !== "");
-
-  if (!lines.length) throw new Error("CSV ist leer.");
-
-  const headers = parseCsvLine(lines[0], delimiter).map(h => h.trim().toLowerCase());
-
-  const findIndex = names => headers.findIndex(h => names.includes(h));
-  const idxNummer = findIndex(["nummer", "id"]);
-  const idxDeutsch = findIndex(["deutsch"]);
-  const idxSpanisch = findIndex(["spanisch", "espanol", "español"]);
-  const idxKategorie = findIndex(["kategorie", "kategorieid", "category"]);
-  const idxZaehler = findIndex(["zaehler", "zähler", "stufe"]);
-  const idxBemerkungen = findIndex(["bemerkungen", "bemerkung", "notiz", "notizen", "notes"]);
-
-  if (idxDeutsch < 0 || idxSpanisch < 0){
-    throw new Error("CSV braucht mindestens die Spalten Deutsch und Spanisch.");
-  }
-
-  const items = [];
-  for (let i = 1; i < lines.length; i++){
-    const cols = parseCsvLine(lines[i], delimiter);
-    const obj = {
-      Nummer: idxNummer >= 0 ? cols[idxNummer] : i,
-      Deutsch: idxDeutsch >= 0 ? cols[idxDeutsch] : "",
-      Spanisch: idxSpanisch >= 0 ? cols[idxSpanisch] : "",
-      Kategorie: idxKategorie >= 0 ? cols[idxKategorie] : "",
-      Zaehler: idxZaehler >= 0 ? cols[idxZaehler] : 1,
-      Bemerkungen: idxBemerkungen >= 0 ? cols[idxBemerkungen] : ""
-    };
-    items.push(normalizeItem(obj, i));
-  }
-  return items.filter(w => w.Deutsch || w.Spanisch);
-}
-
-function importJsonText(text){
-  const parsed = JSON.parse(text);
-  if(!Array.isArray(parsed)) throw new Error("JSON ist keine Liste.");
-  return parsed.map(normalizeItem).filter(w => w.Deutsch || w.Spanisch);
-}
-
-function importText(text, filename){
-  const lower = (filename || "").toLowerCase();
-  const trimmed = text.trim();
-  if (lower.endsWith(".csv") || lower.endsWith(".txt")){
-    return parseCsv(text);
-  }
-  if (lower.endsWith(".json")){
-    return importJsonText(text);
-  }
-  if (trimmed.startsWith("[") || trimmed.startsWith("{")){
-    return importJsonText(text);
-  }
-  return parseCsv(text);
-}
-
-function importFile(file){
-  const reader = new FileReader();
-  reader.onload = function(){
-    try{
-      const imported = importText(reader.result, file.name);
-      if (!imported.length) throw new Error("Keine gültigen Daten gefunden.");
-      words = imported;
-      current = null;
-      lastNummer = null;
-      saveState();
-      updateCountInfo();
-      el.solutionArea.classList.add("hidden");
-      el.question.textContent = "Import erfolgreich. Du kannst jetzt lernen.";
-      el.levelPill.textContent = "Stufe: –";
-      alert("Import erfolgreich. Die Daten bleiben nun gespeichert.");
-    }catch(err){
-      alert("Import fehlgeschlagen: " + err.message);
-    }finally{
-      el.importFile.value = "";
-    }
-  };
-  reader.readAsText(file, "utf-8");
-}
-
-el.importFile.addEventListener("change", e => {
-  const file = e.target.files && e.target.files[0];
-  if(file) importFile(file);
-});
-
-el.nextBtn.addEventListener("click", () => {
-  if (!current || showingSolution) {
-    nextWord();
-    showingSolution = false;
-  } else {
-    showSolution();
+    document.getElementById("notes").textContent = current.Bemerkungen || "";
     showingSolution = true;
-  }
-});
-el.exportBtn.addEventListener("click", exportJson);
-el.easierBtn.addEventListener("click", () => changeLevel(-1));
-el.harderBtn.addEventListener("click", () => changeLevel(1));
-
-[el.category, el.onlyDifficult, el.avoidRepeat, el.direction].forEach(node => {
-  node.addEventListener("change", updateCountInfo);
-});
-
-words = loadState().map(normalizeItem);
-populateCategories();
-updateCountInfo();
-
-if(words.length > 0){
-  el.question.textContent = "Gespeicherte Daten gefunden. Du kannst direkt starten.";
-}else{
-  el.question.textContent = "Bitte zuerst eine CSV- oder JSON-Datei importieren.";
+    document.getElementById("nextBtn").textContent = "Weiter";
 }
+
+document.getElementById("nextBtn").addEventListener("click", ()=>{
+    if(!current || showingSolution){
+        nextWord();
+    } else {
+        showSolution();
+    }
+});
+
+function changeLevel(d){
+    if(!current)return;
+
+    current.Zaehler=Math.min(3,Math.max(1,current.Zaehler+d));
+    document.getElementById("level").textContent=current.Zaehler;
+}
+
 </script>
+
 </body>
 </html>
