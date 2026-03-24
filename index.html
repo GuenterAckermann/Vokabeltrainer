@@ -10,7 +10,7 @@
     :root{
       --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
       --border:#e5e7eb; --accent:#2563eb; --accent2:#1d4ed8;
-      --good:#059669; --bad:#dc2626;
+      --good:#059669; --bad:#dc2626; --edited:#7c3aed;
     }
     *{box-sizing:border-box}
     body{
@@ -25,9 +25,13 @@
     h1{font-size:1.5rem; margin:0 0 16px;}
     h3{margin:0 0 12px;}
     label{display:block; font-size:.95rem; color:var(--muted); margin-bottom:6px; font-weight:600;}
-    select, input[type="file"]{
+    select, input[type="file"], input[type="text"], textarea{
       width:100%; padding:12px 14px; border:1px solid var(--border);
-      border-radius:12px; background:#fff; font-size:1rem;
+      border-radius:12px; background:#fff; font-size:1rem; color:var(--text);
+    }
+    textarea{
+      min-height:90px; resize:vertical;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
     .grid{display:grid; gap:12px;}
     @media (min-width:640px){ .grid.two{grid-template-columns:1fr 1fr;} }
@@ -41,6 +45,7 @@
     button.secondary{background:#fff; color:var(--text); border:1px solid var(--border);}
     button.good{background:var(--good)}
     button.bad{background:var(--bad)}
+    button.edit{background:#6b7280}
     .btns{display:grid; gap:10px; margin-top:14px;}
     @media (min-width:520px){
       .btns.two{grid-template-columns:1fr 1fr;}
@@ -56,9 +61,24 @@
       display:inline-block; padding:6px 10px; border-radius:999px;
       background:#eef2ff; border:1px solid var(--border); font-weight:700;
     }
-    .row{display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+    .pill.edited{
+      background:#f3e8ff; color:var(--edited); border-color:#ddd6fe;
+    }
+    .row{
+      display:flex; justify-content:space-between; align-items:center;
+      gap:8px; flex-wrap:wrap; margin-bottom:10px;
+    }
+    .pillgroup{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    }
     .foot{font-size:.9rem; color:var(--muted); text-align:center; margin-top:10px;}
     .hint{font-size:.9rem; color:var(--muted); line-height:1.45; margin-top:10px;}
+    .edit-area{
+      margin-top:14px; padding-top:14px; border-top:1px solid var(--border);
+    }
+    .autosave-note{
+      font-size:.88rem; color:var(--muted); margin-top:8px;
+    }
   </style>
 </head>
 <body class="notranslate">
@@ -97,14 +117,17 @@
 
     <div class="btns">
       <button id="nextBtn">Weiter</button>
-      <button id="exportBtn" class="secondary">Daten exportieren</button>
+      <button id="exportBtn" class="secondary">CSV exportieren</button>
     </div>
   </div>
 
   <div class="card">
     <div class="row">
       <h3>Lernkarte</h3>
-      <span class="pill" id="levelPill">Stufe: –</span>
+      <div class="pillgroup">
+        <span class="pill" id="levelPill">Stufe: –</span>
+        <span class="pill edited hidden" id="changedPill">Bearbeitet</span>
+      </div>
     </div>
 
     <div class="question" id="question">Bitte zuerst eine CSV- oder JSON-Datei importieren.</div>
@@ -118,6 +141,23 @@
         <button id="easierBtn" class="good">− leichter</button>
         <button id="harderBtn" class="bad">+ schwieriger</button>
       </div>
+
+      <div class="btns" style="margin-top:10px;">
+        <button id="editBtn" class="edit" type="button">Bearbeiten</button>
+      </div>
+
+      <div id="editArea" class="edit-area hidden">
+        <label for="editDeutsch">Deutsch</label>
+        <input id="editDeutsch" type="text" placeholder="Deutsch">
+
+        <label for="editSpanisch" style="margin-top:10px;">Spanisch</label>
+        <input id="editSpanisch" type="text" placeholder="Spanisch">
+
+        <label for="editBemerkungen" style="margin-top:10px;">Bemerkungen</label>
+        <textarea id="editBemerkungen" placeholder="Bemerkungen"></textarea>
+
+        <div class="autosave-note">Änderungen werden automatisch gespeichert.</div>
+      </div>
     </div>
   </div>
 
@@ -128,7 +168,8 @@
     <p class="hint">
       Unterstützte Formate: CSV oder JSON. Für CSV bitte die Spalten
       <code>Nummer, Deutsch, Spanisch, Kategorie, Zaehler, Bemerkungen</code>
-      verwenden. Die Daten bleiben nach dem Import im Browser gespeichert.
+      verwenden.
+      Die Daten bleiben nach dem Import im Browser gespeichert.
     </p>
   </div>
 
@@ -136,7 +177,7 @@
 </div>
 
 <script>
-const STORAGE_KEY = "vokabeltrainer_data_v4";
+const STORAGE_KEY = "vokabeltrainer_data_v5";
 
 const KATEGORIEN_MAP = {
   1: "Verben",
@@ -166,9 +207,15 @@ const el = {
   notes: document.getElementById("notes"),
   catLabel: document.getElementById("catLabel"),
   levelPill: document.getElementById("levelPill"),
+  changedPill: document.getElementById("changedPill"),
   countInfo: document.getElementById("countInfo"),
   easierBtn: document.getElementById("easierBtn"),
-  harderBtn: document.getElementById("harderBtn")
+  harderBtn: document.getElementById("harderBtn"),
+  editBtn: document.getElementById("editBtn"),
+  editArea: document.getElementById("editArea"),
+  editDeutsch: document.getElementById("editDeutsch"),
+  editSpanisch: document.getElementById("editSpanisch"),
+  editBemerkungen: document.getElementById("editBemerkungen")
 };
 
 function saveState(){
@@ -196,7 +243,8 @@ function normalizeItem(x, idx){
     Spanisch: String(x.Spanisch ?? "").trim(),
     Kategorie: KATEGORIEN_MAP[Number(rawKategorie)] || String(rawKategorie).trim(),
     Zaehler: Math.min(3, Math.max(1, Number(x.Zaehler ?? 1) || 1)),
-    Bemerkungen: String(x.Bemerkungen ?? "").trim()
+    Bemerkungen: String(x.Bemerkungen ?? "").trim(),
+    Geaendert: Boolean(x.Geaendert ?? false)
   };
 }
 
@@ -224,6 +272,31 @@ function updateNextButtonLabel(){
   el.nextBtn.textContent = showingSolution ? "Weiter" : "Lösung anzeigen";
 }
 
+function updateChangedBadge(){
+  if(current && current.Geaendert){
+    el.changedPill.classList.remove("hidden");
+  } else {
+    el.changedPill.classList.add("hidden");
+  }
+}
+
+function updateQuestionAndAnswerViews(){
+  if(!current) return;
+
+  if(el.direction.value === "de-es"){
+    el.question.textContent = current.Deutsch;
+    el.answer.textContent = current.Spanisch;
+  } else {
+    el.question.textContent = current.Spanisch;
+    el.answer.textContent = current.Deutsch;
+  }
+
+  el.notes.textContent = current.Bemerkungen || "–";
+  el.catLabel.textContent = current.Kategorie || "–";
+  el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
+  updateChangedBadge();
+}
+
 function weight(z){
   if(z === 1) return 1;
   if(z === 2) return 2;
@@ -249,8 +322,10 @@ function nextWord(){
     current = null;
     el.question.textContent = "Keine passenden Wörter gefunden.";
     el.solutionArea.classList.add("hidden");
+    el.editArea.classList.add("hidden");
     el.levelPill.textContent = "Stufe: –";
     showingSolution = false;
+    updateChangedBadge();
     updateNextButtonLabel();
     updateCountInfo();
     return;
@@ -275,33 +350,25 @@ function nextWord(){
 
   lastNummer = current.Nummer;
   el.solutionArea.classList.add("hidden");
+  el.editArea.classList.add("hidden");
 
   if(el.direction.value === "de-es"){
     el.question.textContent = current.Deutsch;
-  }else{
+  } else {
     el.question.textContent = current.Spanisch;
   }
 
   el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
   showingSolution = false;
+  updateChangedBadge();
   updateNextButtonLabel();
   updateCountInfo();
 }
 
 function showSolution(){
   if(!current) return;
-
-  if(el.direction.value === "de-es"){
-    el.answer.textContent = current.Spanisch;
-  }else{
-    el.answer.textContent = current.Deutsch;
-  }
-
-  el.notes.textContent = current.Bemerkungen || "–";
-  el.catLabel.textContent = current.Kategorie || "–";
-  el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
+  updateQuestionAndAnswerViews();
   el.solutionArea.classList.remove("hidden");
-
   showingSolution = true;
   updateNextButtonLabel();
 }
@@ -322,11 +389,30 @@ function changeLevel(delta){
   saveState();
 }
 
-function exportJson(){
-  const blob = new Blob([JSON.stringify(words, null, 2)], {type: "application/json"});
+function exportCSV(){
+  const header = ["Nummer","Deutsch","Spanisch","Kategorie","Zaehler","Bemerkungen","Geaendert"];
+  const rows = words.map(w => [
+    w.Nummer,
+    w.Deutsch,
+    w.Spanisch,
+    w.Kategorie,
+    w.Zaehler,
+    w.Bemerkungen,
+    w.Geaendert ? "Ja" : ""
+  ]);
+
+  const csv = [header.join(";")]
+    .concat(
+      rows.map(r =>
+        r.map(v => `"${(v ?? "").toString().replace(/"/g,'""')}"`).join(";")
+      )
+    )
+    .join("\n");
+
+  const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "wortliste_export.json";
+  a.download = "wortliste_export.csv";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -388,6 +474,7 @@ function parseCsv(text){
   const idxKategorie = findIndex(["kategorie", "kategorieid", "category"]);
   const idxZaehler = findIndex(["zaehler", "zähler", "stufe"]);
   const idxBemerkungen = findIndex(["bemerkungen", "bemerkung", "notiz", "notizen", "notes"]);
+  const idxGeaendert = findIndex(["geaendert", "geändert", "bearbeitet", "changed"]);
 
   if (idxDeutsch < 0 || idxSpanisch < 0){
     throw new Error("CSV braucht mindestens die Spalten Deutsch und Spanisch.");
@@ -402,7 +489,8 @@ function parseCsv(text){
       Spanisch: idxSpanisch >= 0 ? cols[idxSpanisch] : "",
       Kategorie: idxKategorie >= 0 ? cols[idxKategorie] : "",
       Zaehler: idxZaehler >= 0 ? cols[idxZaehler] : 1,
-      Bemerkungen: idxBemerkungen >= 0 ? cols[idxBemerkungen] : ""
+      Bemerkungen: idxBemerkungen >= 0 ? cols[idxBemerkungen] : "",
+      Geaendert: idxGeaendert >= 0 ? ["ja","true","1","x"].includes(String(cols[idxGeaendert] || "").trim().toLowerCase()) : false
     };
     items.push(normalizeItem(obj, i));
   }
@@ -443,8 +531,10 @@ function importFile(file){
       showingSolution = false;
       saveState();
       el.solutionArea.classList.add("hidden");
+      el.editArea.classList.add("hidden");
       el.question.textContent = "Import erfolgreich. Du kannst jetzt lernen.";
       el.levelPill.textContent = "Stufe: –";
+      updateChangedBadge();
       updateNextButtonLabel();
       alert("Import erfolgreich. Die Daten bleiben nun gespeichert.");
     }catch(err){
@@ -454,6 +544,31 @@ function importFile(file){
     }
   };
   reader.readAsText(file, "utf-8");
+}
+
+function openEditArea(){
+  if(!current) return;
+  el.editArea.classList.remove("hidden");
+  el.editDeutsch.value = current.Deutsch;
+  el.editSpanisch.value = current.Spanisch;
+  el.editBemerkungen.value = current.Bemerkungen;
+}
+
+function autoSaveEdits(){
+  if(!current) return;
+
+  const idx = words.findIndex(w => Number(w.Nummer) === Number(current.Nummer));
+  if(idx < 0) return;
+
+  words[idx].Deutsch = el.editDeutsch.value.trim();
+  words[idx].Spanisch = el.editSpanisch.value.trim();
+  words[idx].Bemerkungen = el.editBemerkungen.value.trim();
+  words[idx].Geaendert = true;
+
+  current = words[idx];
+
+  updateQuestionAndAnswerViews();
+  saveState();
 }
 
 el.importFile.addEventListener("change", e => {
@@ -469,18 +584,29 @@ el.nextBtn.addEventListener("click", () => {
   }
 });
 
-el.exportBtn.addEventListener("click", exportJson);
+el.exportBtn.addEventListener("click", exportCSV);
 el.easierBtn.addEventListener("click", () => changeLevel(-1));
 el.harderBtn.addEventListener("click", () => changeLevel(1));
+el.editBtn.addEventListener("click", openEditArea);
+
+el.editDeutsch.addEventListener("input", autoSaveEdits);
+el.editSpanisch.addEventListener("input", autoSaveEdits);
+el.editBemerkungen.addEventListener("input", autoSaveEdits);
 
 [el.category, el.onlyDifficult, el.avoidRepeat, el.direction].forEach(node => {
-  node.addEventListener("change", updateCountInfo);
+  node.addEventListener("change", () => {
+    updateCountInfo();
+    if(current){
+      updateQuestionAndAnswerViews();
+    }
+  });
 });
 
 words = loadState().map(normalizeItem);
 populateCategories();
 updateCountInfo();
 updateNextButtonLabel();
+updateChangedBadge();
 
 if(words.length > 0){
   el.question.textContent = "Gespeicherte Daten gefunden. Du kannst direkt starten.";
