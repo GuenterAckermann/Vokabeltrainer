@@ -8,76 +8,228 @@
   <title>Vokabeltrainer</title>
   <style>
     :root{
-      --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
-      --border:#e5e7eb; --accent:#2563eb; --accent2:#1d4ed8;
-      --good:#059669; --bad:#dc2626; --edited:#7c3aed;
+      --bg:#f5f7fb;
+      --card:#fff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --accent:#2563eb;
+      --accent2:#1d4ed8;
+      --good:#059669;
+      --bad:#dc2626;
+      --edited:#7c3aed;
     }
-    *{box-sizing:border-box}
+
+    *{ box-sizing:border-box; }
+
     body{
-      margin:0; padding:16px; background:var(--bg); color:var(--text);
+      margin:0;
+      padding:16px;
+      background:var(--bg);
+      color:var(--text);
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
-    .wrap{max-width:760px; margin:0 auto;}
+
+    .wrap{
+      max-width:760px;
+      margin:0 auto;
+    }
+
     .card{
-      background:var(--card); border:1px solid var(--border); border-radius:16px;
-      padding:16px; margin-bottom:16px; box-shadow:0 8px 24px rgba(0,0,0,.05);
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      margin-bottom:16px;
+      box-shadow:0 8px 24px rgba(0,0,0,.05);
     }
-    h1{font-size:1.5rem; margin:0 0 16px;}
-    h3{margin:0 0 12px;}
-    label{display:block; font-size:.95rem; color:var(--muted); margin-bottom:6px; font-weight:600;}
-    select, input[type="file"], input[type="text"], textarea{
-      width:100%; padding:12px 14px; border:1px solid var(--border);
-      border-radius:12px; background:#fff; font-size:1rem; color:var(--text);
+
+    h1{
+      font-size:1.5rem;
+      margin:0 0 16px;
     }
+
+    h3{
+      margin:0 0 12px;
+    }
+
+    label{
+      display:block;
+      font-size:.95rem;
+      color:var(--muted);
+      margin-bottom:6px;
+      font-weight:600;
+    }
+
+    select,
+    input[type="file"],
+    input[type="text"],
     textarea{
-      min-height:90px; resize:vertical;
+      width:100%;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+      font-size:1rem;
+      color:var(--text);
+    }
+
+    textarea{
+      min-height:90px;
+      resize:vertical;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
-    .grid{display:grid; gap:12px;}
-    @media (min-width:640px){ .grid.two{grid-template-columns:1fr 1fr;} }
-    .check{display:flex; gap:10px; align-items:center; margin-top:8px;}
-    .check label{margin:0; color:var(--text); font-weight:500;}
+
+    .grid{
+      display:grid;
+      gap:12px;
+    }
+
+    @media (min-width:640px){
+      .grid.two{
+        grid-template-columns:1fr 1fr;
+      }
+    }
+
+    .check{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:8px;
+    }
+
+    .check label{
+      margin:0;
+      color:var(--text);
+      font-weight:500;
+    }
+
     button{
-      border:0; border-radius:12px; padding:12px 14px; cursor:pointer;
-      font-size:1rem; font-weight:700; color:#fff; background:var(--accent);
+      border:0;
+      border-radius:12px;
+      padding:12px 14px;
+      cursor:pointer;
+      font-size:1rem;
+      font-weight:700;
+      color:#fff;
+      background:var(--accent);
     }
-    button:hover{background:var(--accent2)}
-    button.secondary{background:#fff; color:var(--text); border:1px solid var(--border);}
-    button.good{background:var(--good)}
-    button.bad{background:var(--bad)}
-    button.edit{background:#6b7280}
-    .btns{display:grid; gap:10px; margin-top:14px;}
+
+    button:hover{
+      background:var(--accent2);
+    }
+
+    button.secondary{
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--border);
+    }
+
+    button.good{
+      background:var(--good);
+    }
+
+    button.bad{
+      background:var(--bad);
+    }
+
+    button.edit{
+      background:#6b7280;
+    }
+
+    .btns{
+      display:grid;
+      gap:10px;
+      margin-top:14px;
+    }
+
     @media (min-width:520px){
-      .btns.two{grid-template-columns:1fr 1fr;}
+      .btns.two{
+        grid-template-columns:1fr 1fr;
+      }
     }
+
     .question{
-      min-height:96px; display:flex; align-items:center; justify-content:center;
-      text-align:center; font-size:2rem; font-weight:800; padding:10px;
+      min-height:96px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:2rem;
+      font-weight:800;
+      padding:10px;
     }
-    .answer{font-size:1.5rem; font-weight:800; text-align:center; margin-bottom:14px;}
-    .hidden{display:none}
-    .muted{color:var(--muted)}
+
+    .answer{
+      font-size:1.5rem;
+      font-weight:800;
+      text-align:center;
+      margin-bottom:14px;
+    }
+
+    .hidden{
+      display:none;
+    }
+
+    .muted{
+      color:var(--muted);
+    }
+
     .pill{
-      display:inline-block; padding:6px 10px; border-radius:999px;
-      background:#eef2ff; border:1px solid var(--border); font-weight:700;
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#eef2ff;
+      border:1px solid var(--border);
+      font-weight:700;
     }
+
     .pill.edited{
-      background:#f3e8ff; color:var(--edited); border-color:#ddd6fe;
+      background:#f3e8ff;
+      color:var(--edited);
+      border-color:#ddd6fe;
     }
+
     .row{
-      display:flex; justify-content:space-between; align-items:center;
-      gap:8px; flex-wrap:wrap; margin-bottom:10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
     }
+
     .pillgroup{
-      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
     }
-    .foot{font-size:.9rem; color:var(--muted); text-align:center; margin-top:10px;}
-    .hint{font-size:.9rem; color:var(--muted); line-height:1.45; margin-top:10px;}
+
+    .foot{
+      font-size:.9rem;
+      color:var(--muted);
+      text-align:center;
+      margin-top:10px;
+    }
+
+    .hint{
+      font-size:.9rem;
+      color:var(--muted);
+      line-height:1.45;
+      margin-top:10px;
+    }
+
     .edit-area{
-      margin-top:14px; padding-top:14px; border-top:1px solid var(--border);
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid var(--border);
     }
+
     .autosave-note{
-      font-size:.88rem; color:var(--muted); margin-top:8px;
+      font-size:.88rem;
+      color:var(--muted);
+      margin-top:8px;
     }
   </style>
 </head>
@@ -99,6 +251,7 @@
           <option value="es-de">Spanisch → Deutsch</option>
         </select>
       </div>
+
       <div>
         <label for="category">Kategorie</label>
         <select id="category"></select>
@@ -134,6 +287,7 @@
 
     <div id="solutionArea" class="hidden">
       <div class="answer" id="answer"></div>
+
       <p><strong>Bemerkungen:</strong> <span id="notes" class="muted">–</span></p>
       <p><strong>Kategorie:</strong> <span id="catLabel" class="muted">–</span></p>
 
@@ -452,6 +606,7 @@ function parseCsvLine(line, delimiter){
       currentValue += ch;
     }
   }
+
   result.push(currentValue);
   return result.map(v => v.trim());
 }
@@ -494,6 +649,7 @@ function parseCsv(text){
     };
     items.push(normalizeItem(obj, i));
   }
+
   return items.filter(w => w.Deutsch || w.Spanisch);
 }
 
@@ -510,12 +666,15 @@ function importText(text, filename){
   if (lower.endsWith(".csv") || lower.endsWith(".txt")){
     return parseCsv(text);
   }
+
   if (lower.endsWith(".json")){
     return importJsonText(text);
   }
+
   if (trimmed.startsWith("[") || trimmed.startsWith("{")){
     return importJsonText(text);
   }
+
   return parseCsv(text);
 }
 
