@@ -331,7 +331,7 @@
 </div>
 
 <script>
-const STORAGE_KEY = "vokabeltrainer_data_v5";
+const STORAGE_KEY = "vokabeltrainer_data_v6";
 
 const KATEGORIEN_MAP = {
   1: "Verben",
@@ -341,6 +341,11 @@ const KATEGORIEN_MAP = {
   5: "Diverses",
   6: "Sätze"
 };
+
+const KATEGORIEN_REVERSE_MAP = {};
+Object.keys(KATEGORIEN_MAP).forEach(key => {
+  KATEGORIEN_REVERSE_MAP[KATEGORIEN_MAP[key]] = Number(key);
+});
 
 let words = [];
 let current = null;
@@ -389,16 +394,49 @@ function loadState(){
   }
 }
 
+function parseGeaendert(value){
+  const v = String(value ?? "").trim().toLowerCase();
+  return ["ja", "true", "1", "x"].includes(v);
+}
+
+function normalizeKategorie(rawKategorie, rawKategorieID){
+  if (rawKategorieID !== undefined && rawKategorieID !== null && String(rawKategorieID).trim() !== "") {
+    const id = Number(rawKategorieID);
+    if (KATEGORIEN_MAP[id]) {
+      return {
+        Kategorie: KATEGORIEN_MAP[id],
+        KategorieID: id
+      };
+    }
+  }
+
+  const text = String(rawKategorie ?? "").trim();
+  const fromNumber = KATEGORIEN_MAP[Number(text)];
+  if (fromNumber) {
+    return {
+      Kategorie: fromNumber,
+      KategorieID: Number(text)
+    };
+  }
+
+  const fromName = KATEGORIEN_REVERSE_MAP[text];
+  return {
+    Kategorie: text,
+    KategorieID: fromName || null
+  };
+}
+
 function normalizeItem(x, idx){
-  const rawKategorie = x.Kategorie ?? "";
+  const kat = normalizeKategorie(x.Kategorie, x.KategorieID);
   return {
     Nummer: Number(x.Nummer ?? idx + 1),
     Deutsch: String(x.Deutsch ?? "").trim(),
     Spanisch: String(x.Spanisch ?? "").trim(),
-    Kategorie: KATEGORIEN_MAP[Number(rawKategorie)] || String(rawKategorie).trim(),
+    Kategorie: kat.Kategorie,
+    KategorieID: kat.KategorieID,
     Zaehler: Math.min(3, Math.max(1, Number(x.Zaehler ?? 1) || 1)),
     Bemerkungen: String(x.Bemerkungen ?? "").trim(),
-    Geaendert: Boolean(x.Geaendert ?? false)
+    Geaendert: parseGeaendert(x.Geaendert)
   };
 }
 
@@ -544,12 +582,13 @@ function changeLevel(delta){
 }
 
 function exportCSV(){
-  const header = ["Nummer","Deutsch","Spanisch","Kategorie","Zaehler","Bemerkungen","Geaendert"];
+  const header = ["Nummer","Deutsch","Spanisch","Kategorie","KategorieID","Zaehler","Bemerkungen","Geaendert"];
   const rows = words.map(w => [
     w.Nummer,
     w.Deutsch,
     w.Spanisch,
     w.Kategorie,
+    w.KategorieID ?? "",
     w.Zaehler,
     w.Bemerkungen,
     w.Geaendert ? "Ja" : ""
@@ -626,7 +665,8 @@ function parseCsv(text){
   const idxNummer = findIndex(["nummer", "id"]);
   const idxDeutsch = findIndex(["deutsch"]);
   const idxSpanisch = findIndex(["spanisch", "espanol", "español"]);
-  const idxKategorie = findIndex(["kategorie", "kategorieid", "category"]);
+  const idxKategorie = findIndex(["kategorie", "category"]);
+  const idxKategorieID = findIndex(["kategorieid", "categoryid"]);
   const idxZaehler = findIndex(["zaehler", "zähler", "stufe"]);
   const idxBemerkungen = findIndex(["bemerkungen", "bemerkung", "notiz", "notizen", "notes"]);
   const idxGeaendert = findIndex(["geaendert", "geändert", "bearbeitet", "changed"]);
@@ -643,9 +683,10 @@ function parseCsv(text){
       Deutsch: idxDeutsch >= 0 ? cols[idxDeutsch] : "",
       Spanisch: idxSpanisch >= 0 ? cols[idxSpanisch] : "",
       Kategorie: idxKategorie >= 0 ? cols[idxKategorie] : "",
+      KategorieID: idxKategorieID >= 0 ? cols[idxKategorieID] : "",
       Zaehler: idxZaehler >= 0 ? cols[idxZaehler] : 1,
       Bemerkungen: idxBemerkungen >= 0 ? cols[idxBemerkungen] : "",
-      Geaendert: idxGeaendert >= 0 ? ["ja","true","1","x"].includes(String(cols[idxGeaendert] || "").trim().toLowerCase()) : false
+      Geaendert: idxGeaendert >= 0 ? cols[idxGeaendert] : ""
     };
     items.push(normalizeItem(obj, i));
   }
@@ -719,10 +760,22 @@ function autoSaveEdits(){
   const idx = words.findIndex(w => Number(w.Nummer) === Number(current.Nummer));
   if(idx < 0) return;
 
-  words[idx].Deutsch = el.editDeutsch.value.trim();
-  words[idx].Spanisch = el.editSpanisch.value.trim();
-  words[idx].Bemerkungen = el.editBemerkungen.value.trim();
-  words[idx].Geaendert = true;
+  const neuesDeutsch = el.editDeutsch.value.trim();
+  const neuesSpanisch = el.editSpanisch.value.trim();
+  const neueBemerkungen = el.editBemerkungen.value.trim();
+
+  const hatSichGeaendert =
+    neuesDeutsch !== words[idx].Deutsch ||
+    neuesSpanisch !== words[idx].Spanisch ||
+    neueBemerkungen !== words[idx].Bemerkungen;
+
+  words[idx].Deutsch = neuesDeutsch;
+  words[idx].Spanisch = neuesSpanisch;
+  words[idx].Bemerkungen = neueBemerkungen;
+
+  if (hatSichGeaendert) {
+    words[idx].Geaendert = true;
+  }
 
   current = words[idx];
 
