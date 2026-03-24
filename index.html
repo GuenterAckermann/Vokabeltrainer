@@ -1,4 +1,4 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
@@ -17,7 +17,6 @@
       --accent2:#1d4ed8;
       --good:#059669;
       --bad:#dc2626;
-      --edited:#7c3aed;
     }
 
     *{ box-sizing:border-box; }
@@ -184,12 +183,6 @@
       font-weight:700;
     }
 
-    .pill.edited{
-      background:#f3e8ff;
-      color:var(--edited);
-      border-color:#ddd6fe;
-    }
-
     .row{
       display:flex;
       justify-content:space-between;
@@ -197,13 +190,6 @@
       gap:8px;
       flex-wrap:wrap;
       margin-bottom:10px;
-    }
-
-    .pillgroup{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
     }
 
     .foot{
@@ -277,10 +263,7 @@
   <div class="card">
     <div class="row">
       <h3>Lernkarte</h3>
-      <div class="pillgroup">
-        <span class="pill" id="levelPill">Stufe: –</span>
-        <span class="pill edited hidden" id="changedPill">Bearbeitet</span>
-      </div>
+      <span class="pill" id="levelPill">Stufe: –</span>
     </div>
 
     <div class="question" id="question">Bitte zuerst eine CSV- oder JSON-Datei importieren.</div>
@@ -331,7 +314,7 @@
 </div>
 
 <script>
-const STORAGE_KEY = "vokabeltrainer_data_v6";
+const STORAGE_KEY = "vokabeltrainer_data_v7";
 
 const KATEGORIEN_MAP = {
   1: "Verben",
@@ -366,7 +349,6 @@ const el = {
   notes: document.getElementById("notes"),
   catLabel: document.getElementById("catLabel"),
   levelPill: document.getElementById("levelPill"),
-  changedPill: document.getElementById("changedPill"),
   countInfo: document.getElementById("countInfo"),
   easierBtn: document.getElementById("easierBtn"),
   harderBtn: document.getElementById("harderBtn"),
@@ -388,15 +370,10 @@ function loadState(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map((item, idx) => normalizeItem(item, idx)) : [];
   }catch(e){
     return [];
   }
-}
-
-function parseGeaendert(value){
-  const v = String(value ?? "").trim().toLowerCase();
-  return ["ja", "true", "1", "x"].includes(v);
 }
 
 function normalizeKategorie(rawKategorie, rawKategorieID){
@@ -435,8 +412,7 @@ function normalizeItem(x, idx){
     Kategorie: kat.Kategorie,
     KategorieID: kat.KategorieID,
     Zaehler: Math.min(3, Math.max(1, Number(x.Zaehler ?? 1) || 1)),
-    Bemerkungen: String(x.Bemerkungen ?? "").trim(),
-    Geaendert: false
+    Bemerkungen: String(x.Bemerkungen ?? "").trim()
   };
 }
 
@@ -464,14 +440,6 @@ function updateNextButtonLabel(){
   el.nextBtn.textContent = showingSolution ? "Weiter" : "Lösung anzeigen";
 }
 
-function updateChangedBadge(){
-  if(current && current.Geaendert){
-    el.changedPill.classList.remove("hidden");
-  } else {
-    el.changedPill.classList.add("hidden");
-  }
-}
-
 function updateQuestionAndAnswerViews(){
   if(!current) return;
 
@@ -486,7 +454,6 @@ function updateQuestionAndAnswerViews(){
   el.notes.textContent = current.Bemerkungen || "–";
   el.catLabel.textContent = current.Kategorie || "–";
   el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
-  updateChangedBadge();
 }
 
 function weight(z){
@@ -517,7 +484,6 @@ function nextWord(){
     el.editArea.classList.add("hidden");
     el.levelPill.textContent = "Stufe: –";
     showingSolution = false;
-    updateChangedBadge();
     updateNextButtonLabel();
     updateCountInfo();
     return;
@@ -552,7 +518,6 @@ function nextWord(){
 
   el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
   showingSolution = false;
-  updateChangedBadge();
   updateNextButtonLabel();
   updateCountInfo();
 }
@@ -582,7 +547,7 @@ function changeLevel(delta){
 }
 
 function exportCSV(){
-  const header = ["Nummer","Deutsch","Spanisch","Kategorie","KategorieID","Zaehler","Bemerkungen","Geaendert"];
+  const header = ["Nummer","Deutsch","Spanisch","Kategorie","KategorieID","Zaehler","Bemerkungen"];
   const rows = words.map(w => [
     w.Nummer,
     w.Deutsch,
@@ -590,8 +555,7 @@ function exportCSV(){
     w.Kategorie,
     w.KategorieID ?? "",
     w.Zaehler,
-    w.Bemerkungen,
-    w.Geaendert ? "Ja" : ""
+    w.Bemerkungen
   ]);
 
   const csv = [header.join(";")]
@@ -669,7 +633,6 @@ function parseCsv(text){
   const idxKategorieID = findIndex(["kategorieid", "categoryid"]);
   const idxZaehler = findIndex(["zaehler", "zähler", "stufe"]);
   const idxBemerkungen = findIndex(["bemerkungen", "bemerkung", "notiz", "notizen", "notes"]);
-  const idxGeaendert = findIndex(["geaendert", "geändert", "bearbeitet", "changed"]);
 
   if (idxDeutsch < 0 || idxSpanisch < 0){
     throw new Error("CSV braucht mindestens die Spalten Deutsch und Spanisch.");
@@ -685,8 +648,7 @@ function parseCsv(text){
       Kategorie: idxKategorie >= 0 ? cols[idxKategorie] : "",
       KategorieID: idxKategorieID >= 0 ? cols[idxKategorieID] : "",
       Zaehler: idxZaehler >= 0 ? cols[idxZaehler] : 1,
-      Bemerkungen: idxBemerkungen >= 0 ? cols[idxBemerkungen] : "",
-      Geaendert: idxGeaendert >= 0 ? cols[idxGeaendert] : ""
+      Bemerkungen: idxBemerkungen >= 0 ? cols[idxBemerkungen] : ""
     };
     items.push(normalizeItem(obj, i));
   }
@@ -734,7 +696,6 @@ function importFile(file){
       el.editArea.classList.add("hidden");
       el.question.textContent = "Import erfolgreich. Du kannst jetzt lernen.";
       el.levelPill.textContent = "Stufe: –";
-      updateChangedBadge();
       updateNextButtonLabel();
       alert("Import erfolgreich. Die Daten bleiben nun gespeichert.");
     }catch(err){
@@ -760,22 +721,9 @@ function autoSaveEdits(){
   const idx = words.findIndex(w => Number(w.Nummer) === Number(current.Nummer));
   if(idx < 0) return;
 
-  const neuesDeutsch = el.editDeutsch.value.trim();
-  const neuesSpanisch = el.editSpanisch.value.trim();
-  const neueBemerkungen = el.editBemerkungen.value.trim();
-
-  const hatSichGeaendert =
-    neuesDeutsch !== words[idx].Deutsch ||
-    neuesSpanisch !== words[idx].Spanisch ||
-    neueBemerkungen !== words[idx].Bemerkungen;
-
-  words[idx].Deutsch = neuesDeutsch;
-  words[idx].Spanisch = neuesSpanisch;
-  words[idx].Bemerkungen = neueBemerkungen;
-
-  if (hatSichGeaendert) {
-    words[idx].Geaendert = true;
-  }
+  words[idx].Deutsch = el.editDeutsch.value.trim();
+  words[idx].Spanisch = el.editSpanisch.value.trim();
+  words[idx].Bemerkungen = el.editBemerkungen.value.trim();
 
   current = words[idx];
 
@@ -814,11 +762,10 @@ el.editBemerkungen.addEventListener("input", autoSaveEdits);
   });
 });
 
-words = loadState().map(normalizeItem);
+words = loadState();
 populateCategories();
 updateCountInfo();
 updateNextButtonLabel();
-updateChangedBadge();
 
 if(words.length > 0){
   el.question.textContent = "Gespeicherte Daten gefunden. Du kannst direkt starten.";
