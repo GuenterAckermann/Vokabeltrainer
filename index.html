@@ -436,7 +436,7 @@ function normalizeItem(x, idx){
     KategorieID: kat.KategorieID,
     Zaehler: Math.min(3, Math.max(1, Number(x.Zaehler ?? 1) || 1)),
     Bemerkungen: String(x.Bemerkungen ?? "").trim(),
-    Geaendert: parseGeaendert(x.Geaendert)
+    Geaendert: false
   };
 }
 
