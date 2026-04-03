@@ -554,16 +554,15 @@ function changeLevel(delta){
 }
 
 function exportCSV(){
-  const header = ["Nummer","Deutsch","Spanisch","Kategorie","KategorieID","Zaehler","Bemerkungen"];
+  const header = ["Nummer","Deutsch","Spanisch","Zaehler","Bemerkungen","KategorieID"];
   const rows = words.map(w => [
-    w.Nummer,
-    w.Deutsch,
-    w.Spanisch,
-    w.Kategorie,
-    w.KategorieID ?? "",
-    w.Zaehler,
-    w.Bemerkungen
-  ]);
+  w.Nummer,
+  w.Deutsch,
+  w.Spanisch,
+  w.Zaehler,
+  w.Bemerkungen,
+  w.KategorieID ?? ""
+]);
 
   const csv = [header.join(";")]
     .concat(
