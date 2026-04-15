@@ -363,8 +363,18 @@
         <label for="editSpanisch" style="margin-top:10px;">Spanisch</label>
         <input id="editSpanisch" type="text" placeholder="Spanisch">
 
-        <label for="editBemerkungen" style="margin-top:10px;">Bemerkungen</label>
-        <textarea id="editBemerkungen" placeholder="Bemerkungen"></textarea>
+       <label for="editKategorie" style="margin-top:10px;">Kategorie</label>
+<select id="editKategorie">
+  <option value="1">Verben</option>
+  <option value="2">Substantive</option>
+  <option value="3">Adjektive</option>
+  <option value="4">Redewendungen</option>
+  <option value="5">Diverses</option>
+  <option value="6">Sätze</option>
+</select>
+
+<label for="editBemerkungen" style="margin-top:10px;">Bemerkungen</label>
+<textarea id="editBemerkungen" placeholder="Bemerkungen"></textarea>
 
         <div class="autosave-note">Änderungen werden automatisch gespeichert.</div>
       </div>
@@ -488,6 +498,7 @@ const el = {
   editDeutsch: document.getElementById("editDeutsch"),
   editSpanisch: document.getElementById("editSpanisch"),
   editBemerkungen: document.getElementById("editBemerkungen"),
+  editKategorie: document.getElementById("editKategorie"),
 
   addOverlay: document.getElementById("addOverlay"),
   closeAddBtn: document.getElementById("closeAddBtn"),
@@ -872,10 +883,11 @@ function importFile(file){
 }
 
 function openEditArea(){
-  if(!current) return;
+ if(!current) return;
   el.editArea.classList.remove("hidden");
   el.editDeutsch.value = current.Deutsch;
   el.editSpanisch.value = current.Spanisch;
+  el.editKategorie.value = String(current.KategorieID || 5);
   el.editBemerkungen.value = current.Bemerkungen;
 }
 
@@ -885,8 +897,12 @@ function autoSaveEdits(){
   const idx = words.findIndex(w => Number(w.Nummer) === Number(current.Nummer));
   if(idx < 0) return;
 
+  const katID = Number(el.editKategorie.value);
+
   words[idx].Deutsch = el.editDeutsch.value.trim();
   words[idx].Spanisch = el.editSpanisch.value.trim();
+  words[idx].KategorieID = katID;
+  words[idx].Kategorie = KATEGORIEN_MAP[katID];
   words[idx].Bemerkungen = el.editBemerkungen.value.trim();
 
   current = words[idx];
@@ -1039,6 +1055,7 @@ el.editBtn.addEventListener("click", openEditArea);
 el.editDeutsch.addEventListener("input", autoSaveEdits);
 el.editSpanisch.addEventListener("input", autoSaveEdits);
 el.editBemerkungen.addEventListener("input", autoSaveEdits);
+el.editKategorie.addEventListener("change", autoSaveEdits);
 
 [el.category, el.avoidRepeat, el.direction].forEach(node => {
   node.addEventListener("change", () => {
