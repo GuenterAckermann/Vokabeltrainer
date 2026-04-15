@@ -923,6 +923,11 @@ function suggestCategoryId(deutsch, spanisch){
 
   if (isVerb) return 1;
 
+  const isSubstantiv =
+    /^(la|el|los|las|un|una)\s+/i.test(s);
+
+  if (isSubstantiv) return 2;
+  
   const isSentence =
     d.includes(" ") ||
     /[.!?¿¡]$/.test(s) ||
