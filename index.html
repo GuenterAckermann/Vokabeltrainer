@@ -17,6 +17,7 @@
       --accent2:#1d4ed8;
       --good:#059669;
       --bad:#dc2626;
+      --overlay:rgba(17,24,39,.45);
     }
 
     *{ box-sizing:border-box; }
@@ -63,6 +64,7 @@
     select,
     input[type="file"],
     input[type="text"],
+    input[type="number"],
     textarea{
       width:100%;
       padding:12px 14px;
@@ -146,6 +148,9 @@
       .btns.two{
         grid-template-columns:1fr 1fr;
       }
+      .btns.three{
+        grid-template-columns:1fr 1fr 1fr;
+      }
     }
 
     .question{
@@ -167,7 +172,7 @@
     }
 
     .hidden{
-      display:none;
+      display:none !important;
     }
 
     .muted{
@@ -217,6 +222,63 @@
       color:var(--muted);
       margin-top:8px;
     }
+
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:var(--overlay);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:1000;
+    }
+
+    .modal{
+      width:min(100%, 560px);
+      background:#fff;
+      border-radius:18px;
+      box-shadow:0 20px 60px rgba(0,0,0,.18);
+      padding:18px;
+      border:1px solid var(--border);
+    }
+
+    .modal-title{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-bottom:12px;
+    }
+
+    .modal-title h3{
+      margin:0;
+    }
+
+    .close-x{
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--border);
+      padding:8px 12px;
+    }
+
+    .status{
+      margin-top:10px;
+      font-size:.92rem;
+      color:var(--muted);
+    }
+
+    .status.ok{
+      color:#065f46;
+    }
+
+    .status.warn{
+      color:#92400e;
+    }
+
+    .status.err{
+      color:#991b1b;
+    }
   </style>
 </head>
 <body class="notranslate">
@@ -264,9 +326,10 @@
       <label for="avoidRepeat">Nicht direkt dasselbe Wort wiederholen</label>
     </div>
 
-    <div class="btns">
+    <div class="btns three">
       <button id="nextBtn">Weiter</button>
       <button id="exportBtn" class="secondary">CSV exportieren</button>
+      <button id="addBtn" class="secondary">+ Neues Wort</button>
     </div>
   </div>
 
@@ -281,7 +344,7 @@
     <div id="solutionArea" class="hidden">
       <div class="answer" id="answer"></div>
 
-    <p><span id="notes" style="font-weight:700; font-size:1.1rem; color:red;">–</span></p>
+      <p><span id="notes" style="font-weight:700; font-size:1.1rem; color:darkred;">–</span></p>
       <p><strong>Kategorie:</strong> <span id="catLabel" class="muted">–</span></p>
 
       <div class="btns two">
@@ -323,8 +386,63 @@
   <div class="foot">Tipp: Im Browser-Menü „Zum Startbildschirm hinzufügen“ wählen.</div>
 </div>
 
+<!-- Popup Neues Wort -->
+<div id="addOverlay" class="overlay hidden">
+  <div class="modal">
+    <div class="modal-title">
+      <h3>Neues Wort hinzufügen</h3>
+      <button id="closeAddBtn" class="close-x" type="button">Schließen</button>
+    </div>
+
+    <div class="grid two">
+      <div>
+        <label for="newDeutsch">Deutsch</label>
+        <input id="newDeutsch" type="text" placeholder="z. B. gehen">
+      </div>
+      <div>
+        <label for="newSpanisch">Spanisch</label>
+        <input id="newSpanisch" type="text" placeholder="z. B. ir">
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:12px;">
+      <div>
+        <label for="newZaehler">Zähler</label>
+        <select id="newZaehler">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+      <div>
+        <label for="newKategorie">Kategorie</label>
+        <select id="newKategorie">
+          <option value="1">Verben</option>
+          <option value="2">Substantive</option>
+          <option value="3">Adjektive</option>
+          <option value="4">Redewendungen</option>
+          <option value="5">Diverses</option>
+          <option value="6">Sätze</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label for="newBemerkungen">Bemerkungen</label>
+      <textarea id="newBemerkungen" placeholder="optional"></textarea>
+    </div>
+
+    <div class="status" id="addStatus">Kategorie wird automatisch vorgeschlagen und kann geändert werden.</div>
+
+    <div class="btns two">
+      <button id="saveNewBtn" type="button">Speichern</button>
+      <button id="cancelNewBtn" class="secondary" type="button">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const STORAGE_KEY = "vokabeltrainer_data_v9";
+const STORAGE_KEY = "vokabeltrainer_data_v10";
 
 const KATEGORIEN_MAP = {
   1: "Verben",
@@ -354,6 +472,7 @@ const el = {
   avoidRepeat: document.getElementById("avoidRepeat"),
   nextBtn: document.getElementById("nextBtn"),
   exportBtn: document.getElementById("exportBtn"),
+  addBtn: document.getElementById("addBtn"),
   importFile: document.getElementById("importFile"),
   question: document.getElementById("question"),
   solutionArea: document.getElementById("solutionArea"),
@@ -368,7 +487,18 @@ const el = {
   editArea: document.getElementById("editArea"),
   editDeutsch: document.getElementById("editDeutsch"),
   editSpanisch: document.getElementById("editSpanisch"),
-  editBemerkungen: document.getElementById("editBemerkungen")
+  editBemerkungen: document.getElementById("editBemerkungen"),
+
+  addOverlay: document.getElementById("addOverlay"),
+  closeAddBtn: document.getElementById("closeAddBtn"),
+  cancelNewBtn: document.getElementById("cancelNewBtn"),
+  saveNewBtn: document.getElementById("saveNewBtn"),
+  newDeutsch: document.getElementById("newDeutsch"),
+  newSpanisch: document.getElementById("newSpanisch"),
+  newZaehler: document.getElementById("newZaehler"),
+  newKategorie: document.getElementById("newKategorie"),
+  newBemerkungen: document.getElementById("newBemerkungen"),
+  addStatus: document.getElementById("addStatus")
 };
 
 function saveState(){
@@ -765,6 +895,129 @@ function autoSaveEdits(){
   saveState();
 }
 
+function suggestCategoryId(deutsch, spanisch){
+  const d = (deutsch || "").trim().toLowerCase();
+  const s = (spanisch || "").trim().toLowerCase();
+
+  if (!d && !s) return 5;
+
+  const isVerb =
+    d.endsWith("en") &&
+    (s.endsWith("ar") || s.endsWith("er") || s.endsWith("ir"));
+
+  if (isVerb) return 1;
+
+  const isSentence =
+    d.includes(" ") ||
+    /[.!?¿¡]$/.test(s) ||
+    /[.!?]$/.test(d);
+
+  if (isSentence) return 6;
+
+  return 5;
+}
+
+function updateCategorySuggestion(){
+  const suggested = suggestCategoryId(el.newDeutsch.value, el.newSpanisch.value);
+  el.newKategorie.value = String(suggested);
+  el.addStatus.textContent = `Vorgeschlagene Kategorie: ${KATEGORIEN_MAP[suggested]}`;
+  el.addStatus.className = "status ok";
+}
+
+function resetAddForm(){
+  el.newDeutsch.value = "";
+  el.newSpanisch.value = "";
+  el.newZaehler.value = "2";
+  el.newKategorie.value = "5";
+  el.newBemerkungen.value = "";
+  el.addStatus.textContent = "Kategorie wird automatisch vorgeschlagen und kann geändert werden.";
+  el.addStatus.className = "status";
+}
+
+function openAddModal(){
+  resetAddForm();
+  el.addOverlay.classList.remove("hidden");
+  el.newDeutsch.focus();
+}
+
+function closeAddModal(){
+  el.addOverlay.classList.add("hidden");
+}
+
+function normalizeForDuplicate(text){
+  return String(text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function findDuplicate(deutsch, spanisch){
+  const d = normalizeForDuplicate(deutsch);
+  const s = normalizeForDuplicate(spanisch);
+
+  return words.find(w =>
+    normalizeForDuplicate(w.Deutsch) === d &&
+    normalizeForDuplicate(w.Spanisch) === s
+  );
+}
+
+function saveNewWord(){
+  const deutsch = el.newDeutsch.value.trim();
+  const spanisch = el.newSpanisch.value.trim();
+  const bemerkungen = el.newBemerkungen.value.trim();
+  const zaehler = Number(el.newZaehler.value);
+  const katID = Number(el.newKategorie.value);
+
+  if(!deutsch || !spanisch){
+    el.addStatus.textContent = "Deutsch und Spanisch sind Pflichtfelder.";
+    el.addStatus.className = "status err";
+    return;
+  }
+
+  const duplicate = findDuplicate(deutsch, spanisch);
+  if (duplicate){
+    el.addStatus.textContent = `Dublette gefunden: ${duplicate.Deutsch} → ${duplicate.Spanisch}`;
+    el.addStatus.className = "status err";
+    return;
+  }
+
+  const neueNummer = words.length
+    ? Math.max(...words.map(w => Number(w.Nummer) || 0)) + 1
+    : 1;
+
+  const neuesWort = {
+    Nummer: neueNummer,
+    Deutsch: deutsch,
+    Spanisch: spanisch,
+    Kategorie: KATEGORIEN_MAP[katID],
+    KategorieID: katID,
+    Zaehler: zaehler,
+    Bemerkungen: bemerkungen
+  };
+
+  words.push(neuesWort);
+  saveState();
+  populateCategories();
+
+  current = neuesWort;
+  lastNummer = neuesWort.Nummer;
+  showingSolution = false;
+
+  if(el.direction.value === "de-es"){
+    el.question.textContent = current.Deutsch;
+  } else {
+    el.question.textContent = current.Spanisch;
+  }
+
+  el.solutionArea.classList.add("hidden");
+  el.editArea.classList.add("hidden");
+  el.levelPill.textContent = `Stufe: ${current.Zaehler}`;
+  updateNextButtonLabel();
+  updateCountInfo();
+
+  closeAddModal();
+}
+
 el.importFile.addEventListener("change", e => {
   const file = e.target.files && e.target.files[0];
   if(file) importFile(file);
@@ -803,6 +1056,18 @@ el.editBemerkungen.addEventListener("input", autoSaveEdits);
       updateQuestionAndAnswerViews();
     }
   });
+});
+
+el.addBtn.addEventListener("click", openAddModal);
+el.closeAddBtn.addEventListener("click", closeAddModal);
+el.cancelNewBtn.addEventListener("click", closeAddModal);
+el.saveNewBtn.addEventListener("click", saveNewWord);
+
+el.newDeutsch.addEventListener("input", updateCategorySuggestion);
+el.newSpanisch.addEventListener("input", updateCategorySuggestion);
+
+el.addOverlay.addEventListener("click", (e) => {
+  if (e.target === el.addOverlay) closeAddModal();
 });
 
 words = loadState();
