@@ -279,6 +279,64 @@
     .status.err{
       color:#991b1b;
     }
+
+    .search-box{
+      margin-top:10px;
+    }
+
+    .search-results{
+      margin-top:12px;
+      max-height:320px;
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+    }
+
+    .search-item{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      cursor:pointer;
+    }
+
+    .search-item:last-child{
+      border-bottom:0;
+    }
+
+    .search-item:hover{
+      background:#f9fafb;
+    }
+
+    .search-title{
+      font-weight:800;
+    }
+
+    .search-meta{
+      font-size:.88rem;
+      color:var(--muted);
+      margin-top:3px;
+    }
+
+    .stats-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+
+    .stat-box{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px;
+      text-align:center;
+      background:#f9fafb;
+    }
+
+    .stat-num{
+      font-size:1.4rem;
+      font-weight:800;
+    }
+
   </style>
 </head>
 <body class="notranslate">
@@ -330,6 +388,8 @@
       <button id="nextBtn">Weiter</button>
       <button id="exportBtn" class="secondary">CSV exportieren</button>
       <button id="addBtn" class="secondary">+ Neues Wort</button>
+      <button id="searchBtn" class="secondary" type="button">🔍 Suchen</button>
+      <button id="statsBtn" class="secondary" type="button">Statistik</button>
     </div>
   </div>
 
@@ -352,8 +412,9 @@
         <button id="harderBtn" class="bad">+ schwieriger</button>
       </div>
 
-      <div class="btns" style="margin-top:10px;">
+      <div class="btns two" style="margin-top:10px;">
         <button id="editBtn" class="edit" type="button">Bearbeiten</button>
+        <button id="deleteBtn" class="bad" type="button">Löschen</button>
       </div>
 
       <div id="editArea" class="edit-area hidden">
@@ -451,8 +512,52 @@
   </div>
 </div>
 
+
+
+<!-- Popup Suche -->
+<div id="searchOverlay" class="overlay hidden">
+  <div class="modal">
+    <div class="modal-title">
+      <h3>Datensatz suchen</h3>
+      <button id="closeSearchBtn" class="close-x" type="button">Schließen</button>
+    </div>
+
+    <label for="searchInput">Suchbegriff</label>
+    <input id="searchInput" class="search-box" type="text" placeholder="Mindestens 3 Zeichen eingeben">
+    <div class="status" id="searchStatus">Suche in Deutsch, Spanisch, Kategorie und Bemerkungen.</div>
+    <div id="searchResults" class="search-results hidden"></div>
+  </div>
+</div>
+
+<!-- Popup Statistik -->
+<div id="statsOverlay" class="overlay hidden">
+  <div class="modal">
+    <div class="modal-title">
+      <h3>Level-Verteilung</h3>
+      <button id="closeStatsBtn" class="close-x" type="button">Schließen</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-num" id="statLevel1">0</div>
+        <div class="muted">Level 1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="statLevel2">0</div>
+        <div class="muted">Level 2</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="statLevel3">0</div>
+        <div class="muted">Level 3</div>
+      </div>
+    </div>
+
+    <div class="status" id="statsStatus"></div>
+  </div>
+</div>
+
 <script>
-const STORAGE_KEY = "vokabeltrainer_data_v10";
+const STORAGE_KEY = "vokabeltrainer_data_v11";
 
 const KATEGORIEN_MAP = {
   1: "Verben",
@@ -483,6 +588,8 @@ const el = {
   nextBtn: document.getElementById("nextBtn"),
   exportBtn: document.getElementById("exportBtn"),
   addBtn: document.getElementById("addBtn"),
+  searchBtn: document.getElementById("searchBtn"),
+  statsBtn: document.getElementById("statsBtn"),
   importFile: document.getElementById("importFile"),
   question: document.getElementById("question"),
   solutionArea: document.getElementById("solutionArea"),
@@ -494,6 +601,7 @@ const el = {
   easierBtn: document.getElementById("easierBtn"),
   harderBtn: document.getElementById("harderBtn"),
   editBtn: document.getElementById("editBtn"),
+  deleteBtn: document.getElementById("deleteBtn"),
   editArea: document.getElementById("editArea"),
   editDeutsch: document.getElementById("editDeutsch"),
   editSpanisch: document.getElementById("editSpanisch"),
@@ -509,7 +617,20 @@ const el = {
   newZaehler: document.getElementById("newZaehler"),
   newKategorie: document.getElementById("newKategorie"),
   newBemerkungen: document.getElementById("newBemerkungen"),
-  addStatus: document.getElementById("addStatus")
+  addStatus: document.getElementById("addStatus"),
+
+  searchOverlay: document.getElementById("searchOverlay"),
+  closeSearchBtn: document.getElementById("closeSearchBtn"),
+  searchInput: document.getElementById("searchInput"),
+  searchStatus: document.getElementById("searchStatus"),
+  searchResults: document.getElementById("searchResults"),
+
+  statsOverlay: document.getElementById("statsOverlay"),
+  closeStatsBtn: document.getElementById("closeStatsBtn"),
+  statLevel1: document.getElementById("statLevel1"),
+  statLevel2: document.getElementById("statLevel2"),
+  statLevel3: document.getElementById("statLevel3"),
+  statsStatus: document.getElementById("statsStatus")
 };
 
 function saveState(){
@@ -669,17 +790,28 @@ function nextWord(){
     if(reduced.length > 0) list = reduced;
   }
 
-  const total = list.reduce((sum, w) => sum + weight(Number(w.Zaehler)), 0);
+  const groups = [1, 2, 3]
+    .map(level => ({
+      level,
+      items: list.filter(w => Number(w.Zaehler) === level),
+      levelWeight: weight(level)
+    }))
+    .filter(group => group.items.length > 0);
+
+  const total = groups.reduce((sum, group) => sum + group.levelWeight, 0);
   let r = Math.floor(Math.random() * total) + 1;
 
+  let chosenGroup = groups[0];
   let running = 0;
-  for(const w of list){
-    running += weight(Number(w.Zaehler));
+  for(const group of groups){
+    running += group.levelWeight;
     if(r <= running){
-      current = w;
+      chosenGroup = group;
       break;
     }
   }
+
+  current = chosenGroup.items[Math.floor(Math.random() * chosenGroup.items.length)];
 
   lastNummer = current.Nummer;
   el.solutionArea.classList.add("hidden");
@@ -1039,6 +1171,128 @@ function saveNewWord(){
   closeAddModal();
 }
 
+function deleteCurrentWord(){
+  if(!current) return;
+
+  const ok = confirm(`Diesen Datensatz wirklich löschen?\n\n${current.Deutsch} → ${current.Spanisch}`);
+  if(!ok) return;
+
+  words = words.filter(w => Number(w.Nummer) !== Number(current.Nummer));
+  current = null;
+  saveState();
+  el.solutionArea.classList.add("hidden");
+  el.editArea.classList.add("hidden");
+  el.levelPill.textContent = "Stufe: –";
+
+  if(words.length > 0){
+    el.question.textContent = "Datensatz gelöscht. Klicke auf Weiter.";
+  } else {
+    el.question.textContent = "Datensatz gelöscht. Keine Wörter mehr vorhanden.";
+  }
+
+  showingSolution = false;
+  updateNextButtonLabel();
+  updateCountInfo();
+}
+
+function openStatsModal(){
+  const c1 = words.filter(w => Number(w.Zaehler) === 1).length;
+  const c2 = words.filter(w => Number(w.Zaehler) === 2).length;
+  const c3 = words.filter(w => Number(w.Zaehler) === 3).length;
+  const total = words.length || 1;
+
+  el.statLevel1.textContent = c1;
+  el.statLevel2.textContent = c2;
+  el.statLevel3.textContent = c3;
+  el.statsStatus.textContent = `Gesamt: ${words.length} Wörter · Level 1: ${Math.round(c1/total*100)}%, Level 2: ${Math.round(c2/total*100)}%, Level 3: ${Math.round(c3/total*100)}%`;
+  el.statsOverlay.classList.remove("hidden");
+}
+
+function closeStatsModal(){
+  el.statsOverlay.classList.add("hidden");
+}
+
+function openSearchModal(){
+  el.searchInput.value = "";
+  el.searchResults.innerHTML = "";
+  el.searchResults.classList.add("hidden");
+  el.searchStatus.textContent = "Mindestens 3 Zeichen eingeben.";
+  el.searchStatus.className = "status";
+  el.searchOverlay.classList.remove("hidden");
+  el.searchInput.focus();
+}
+
+function closeSearchModal(){
+  el.searchOverlay.classList.add("hidden");
+}
+
+function makeSearchText(w){
+  return [w.Deutsch, w.Spanisch, w.Kategorie, w.Bemerkungen, w.Nummer]
+    .join(" ")
+    .toLowerCase();
+}
+
+function renderSearchResults(){
+  const q = el.searchInput.value.trim().toLowerCase();
+  el.searchResults.innerHTML = "";
+
+  if(q.length < 3){
+    el.searchResults.classList.add("hidden");
+    el.searchStatus.textContent = "Mindestens 3 Zeichen eingeben.";
+    el.searchStatus.className = "status";
+    return;
+  }
+
+  const matches = words
+    .filter(w => makeSearchText(w).includes(q))
+    .slice(0, 50);
+
+  if(matches.length === 0){
+    el.searchResults.classList.add("hidden");
+    el.searchStatus.textContent = "Keine passenden Datensätze gefunden.";
+    el.searchStatus.className = "status warn";
+    return;
+  }
+
+  el.searchStatus.textContent = `${matches.length} Treffer${matches.length === 50 ? " oder mehr" : ""}. Datensatz anklicken, um ihn zu öffnen.`;
+  el.searchStatus.className = "status ok";
+  el.searchResults.classList.remove("hidden");
+
+  matches.forEach(w => {
+    const item = document.createElement("div");
+    item.className = "search-item";
+    item.innerHTML = `
+      <div class="search-title">${escapeHtml(w.Deutsch)} → ${escapeHtml(w.Spanisch)}</div>
+      <div class="search-meta">Level ${w.Zaehler} · ${escapeHtml(w.Kategorie || "–")} · Nr. ${w.Nummer}</div>
+    `;
+    item.addEventListener("click", () => selectSearchResult(w.Nummer));
+    el.searchResults.appendChild(item);
+  });
+}
+
+function escapeHtml(value){
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function selectSearchResult(nummer){
+  const found = words.find(w => Number(w.Nummer) === Number(nummer));
+  if(!found) return;
+
+  current = found;
+  lastNummer = found.Nummer;
+  showingSolution = true;
+  updateQuestionAndAnswerViews();
+  el.solutionArea.classList.remove("hidden");
+  el.editArea.classList.add("hidden");
+  updateNextButtonLabel();
+  closeSearchModal();
+}
+
 el.importFile.addEventListener("change", e => {
   const file = e.target.files && e.target.files[0];
   if(file) importFile(file);
@@ -1056,6 +1310,12 @@ el.exportBtn.addEventListener("click", exportCSV);
 el.easierBtn.addEventListener("click", () => changeLevel(-1));
 el.harderBtn.addEventListener("click", () => changeLevel(1));
 el.editBtn.addEventListener("click", openEditArea);
+el.deleteBtn.addEventListener("click", deleteCurrentWord);
+el.statsBtn.addEventListener("click", openStatsModal);
+el.searchBtn.addEventListener("click", openSearchModal);
+el.closeStatsBtn.addEventListener("click", closeStatsModal);
+el.closeSearchBtn.addEventListener("click", closeSearchModal);
+el.searchInput.addEventListener("input", renderSearchResults);
 
 el.editDeutsch.addEventListener("input", autoSaveEdits);
 el.editSpanisch.addEventListener("input", autoSaveEdits);
@@ -1090,6 +1350,14 @@ el.newSpanisch.addEventListener("input", updateCategorySuggestion);
 
 el.addOverlay.addEventListener("click", (e) => {
   if (e.target === el.addOverlay) closeAddModal();
+});
+
+el.searchOverlay.addEventListener("click", (e) => {
+  if (e.target === el.searchOverlay) closeSearchModal();
+});
+
+el.statsOverlay.addEventListener("click", (e) => {
+  if (e.target === el.statsOverlay) closeStatsModal();
 });
 
 words = loadState();
